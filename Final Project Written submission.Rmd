@@ -1,0 +1,469 @@
+---
+title: "M239 FA2021 Final Project Paper"
+author: "Hayden Vaughn"
+date: "12/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+all_seasons <- read_csv("/Users/haydenvaughn/Downloads/all_seasons.csv")
+nba_contracts_history <- read_csv("/Users/haydenvaughn/Downloads/nba_contracts_history.csv")
+df1 <- left_join(nba_contracts_history,all_seasons,by=c("NAME" = "player_name"))
+colnames(df1)[13]<-"FGPer"
+colnames(df1)[16]<-"3PPer"
+colnames(df1)[19]<-"FTPer"
+```
+
+This statistical study covers a joined data set that contains 199 NBA players that signed new contracts in the years on or between 2010-2020 then taking that contract amount and turning it into the average salary per season. The data set also then includes their previous season’s average performance stats such as scoring averages while also reporting biographical data such as their height, weight, and country of birth. All together is a data set of 199 NBA players with thorough contract data, biographical data, and in-game statistics. What makes this data set especially important and interesting is that the players performance stats are from the season before their reported contract was signed. This allows us to take these players' performance statistics and use them to identify relationships to the contract that was signed in the following season, possibly allowing us to create models that can predict a player’s salary in following years. The question of interest is what biographical factors of a player, if any, are significant predictors for a players salary? Also what previous season box score statistics are the best predictors for a players salary in the following season and is there a combination of both that can help us most accurately predict salary? The goal with this dataset is to create a model that can use NBA players’ most significant variables in order to accurately predict their contract salary signed in the following season. After building our final model using parallel slopes in multilinear regression using performance statistics of points, field goals made, rebounds, and assists, we wanted to analyze how accurate our model could be predicting recently signed contracts in 2021. After taking these results, we discussed them and decided if there were to be additional work on this model, what path should be taken.
+After data visualization, we found some apparent trends between certain variables. Our most basic measurement of a player’s impact would be the number of points scored in a season which when plotted against average salary we found strong positive linear correlation making this a variable we want to explore, and also notifying we should explore other scoring statistics that are likely connected to average salary. After exploring biographical statistics such as height, weight, BMI, and birth country, we found no apparent relationships to salary further showing variables of interest would be based on performance which makes sense. Put our best graphics in here that we want to explore (MS2); salary one alongside age, also show the ones where biographical variables have no connection to anything
+
+```{r}
+ggplot(df1,aes(PTS,AVG_SALARY,size=AGE,alpha=0.3))+
+  geom_point()
+```
+
+```{r}
+BMI_df = df1 %>%
+  mutate(BMI = (player_weight*703)/player_height^2)
+BMI_df
+
+ggplot(BMI_df, aes(x = BMI, y = AVG_SALARY, color = MIN))+
+  geom_point()
+```
+
+```{r}
+ggplot(df1,aes(x= FGPer,fill=draft_round))+
+  geom_boxplot()
+```
+
+Further exploring points scored in a season, we took the variable for field goals made in a season, and fit a model to assess its potential to predict average salary. We found that FGM is a significant predictor of a players average salary in the following season (p-value of 2<e16). The QQ plot showed that points were well fit to the line with slight deviation at the tails. The Residuals plot was evenly distributed around the mean with slight bunching around the bottom left portion, and the leverage plot had no drastic outliers and the points were well distributed around 0 so error is not large. Lastly, our adjusted r squared value of 0.5591 covers a majority of variation and would cover more if we were to add more explanatory variables. To further explore more explanatory variables to increase the model’s fit, the categorical variable of draft round was incorporated which had levels of 1st round, second round, and undrafted players. Only draft round 1 was a significant predictor of salary in our parallel slopes model however we had our highest MSE value yet. For our final model, we used a parallel slopes model with 4 predictors of salary (FGM, PTS, REB, AST) that were all significant at alpha = 0.05. To test if our model worked, or to what extent, we took the $21 million a year contract of Lonzo Ball signed just this past 2021 off season. After using his 2020-2021 stats for prediction we got a result of $17.4 million a year. Our F statistic was 75.31 and adjusted r-squared value was 0.65.
+When modeling average salary using the predictors of field goals made as well as the categorical variable draft round confirmed showed that field goals made in a season is a good continuous explanatory variable to the player’s average salary the next season as well as other performance statistics that led us to our final model. We also learned that draft round is a significant predictor for a player’s average salary, but does not explain a lot of the data’s variance. In the parallel slopes model, only players drafted in the first round were significant predictors for average salary after controlling for a player’s field goals made. When modeling interaction between a player’s draft round and field goals made, it explained a moderate amount of the variance, however, the interactions caused all of the predictors except for field goals made to not be significant predictors of average salary. These problems with high MSE values and low significance among predictors led us to a final multiple linear regression model of performance statistics that best show a players individual impact on the court.
+Our final model did not perfectly predict Lonzo Ball’s 2021 contract with the bulls, however after discussion our results were reasonably accurate. While there are many opinions surrounding whether or not Ball was worth $21 million a year when his contract was signed, there are many other variables involved that our model would benefit to account for. Since 2010 when our data starts, the average NBA salary cap per team per year has increased from 52 million dollars to 112 million. This alongside factors such as veteran statuses, injury history, and off court likeliness all make a player more or less attractive to an organization. What this means for our model is that our model could benefit from attempting to model these various extraneous factors such as the drastic increase in salary cap over the last 10 years. Our model represents predictions solely based on performance over the previous year which means it would be a best fit for second year contract predictions, after a player's 1 year rookie contract is up. 
+	In all sports there exists a large amount of randomness and luck when discussing what players are successful and which are not.  This randomness showed up during our analysis in the form of unexplained variance.  Even our best predicting model only explained about 65 percent of the randomness of our data.  We concluded from this that there must be further interactions at play at a deeper level than we explored over the course of this semester.  We hypothesize that if we were to build a model that also took into account for position, then the model would explain a portion of the leftover variance that our other models didn’t.  At the end of the day, we were limited by time and the robustness of our data, so it is not surprising that we weren’t able to have more conclusive results. 
+
+# Code 
+# Milestone 2
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+### Read in data sets
+```{r}
+all_seasons <- read_csv("/Users/haydenvaughn/Downloads/all_seasons.csv")
+```
+```{r}
+nba_contracts_history <- read_csv("/Users/haydenvaughn/Downloads/nba_contracts_history.csv")
+```
+
+### make all seasons and contracts distinct
+```{r}
+all_seasons <- all_seasons[!duplicated(all_seasons$player_name),]
+str(all_seasons)
+```
+```{r}
+nba_contracts_history %>% 
+  arrange(NAME)
+```
+
+### Join data sets
+```{r}
+df1 <- left_join(nba_contracts_history,all_seasons,by=c("NAME" = "player_name"))
+```
+
+```{r}
+str(df1)
+```
+
+```{r}
+colnames(df1)[13]<-"FGPer"
+colnames(df1)[16]<-"3PPer"
+colnames(df1)[19]<-"FTPer"
+```
+
+
+### Plot Total Points  vs. Salary
+```{r}
+ggplot(df1,aes(PTS,AVG_SALARY,size=AGE,alpha=0.3))+
+  geom_point()
+```
+
+There might be a positive linear relationship between total points scored in a season by a particular player and the player's average salary.  However, there is not a clear pattern with age of the player and salary or points scored.
+
+### Plot Minutes vs. Salary
+```{r}
+ggplot(df1,aes(MIN,AVG_SALARY,color=country))+
+  geom_point()
+
+```
+
+There appears to be a positive relationship between a player's minutes played in a season and the player's average salary, however, there is more testing required to see if the relationship is strictly linear.  Also, since there are few countries that produce NBA players other than the US, it is hard to detect a relationship between birth country and salary and minutes played.
+
+### Plot FG% vs Salary
+
+```{r}
+ggplot(df1,aes(x= FGPer,fill=draft_round))+
+  geom_boxplot()
+```
+
+From this graph, it appears that the round a player was drafted is not correlated to the player's field goal percentage since the median FG% of second round draftees was highest.
+
+### Plot BMI vs Salary
+```{r}
+BMI_df = df1 %>%
+  mutate(BMI = (player_weight*703)/player_height^2)
+BMI_df
+
+ggplot(BMI_df, aes(x = BMI, y = AVG_SALARY, color = MIN))+
+  geom_point()
+```
+
+Based on the graph, there does not seem to be a relationship at all between a player's BMI and their average salary. However, there seems be a evidence from the plot to suggest there might be negative relationship between BMI and minutes played ina  seasoin.
+
+### Plot net_rating vs Salary
+```{r}
+ggplot(df1,aes(country,fill=draft_round))+
+  geom_bar(position="fill")
+```
+
+# Milestone 3
+
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+
+# Step 0: Identify a numeric response variable in your dataset and a numeric explanatory variable.
+
+Average Salary as a response to number of Field Goals Made in the previous season
+
+# Step 1: Determine the fitted model (10 points)
+```{r}
+nbalm<-lm(AVG_SALARY ~ FGM, data = df1)
+summary(nbalm)
+```
+
+Fitted Model: y = 1123054 + 33125(x)
+
+# Step 2: Perform a test for the slope.
+
+```{r}
+summary(nbalm)
+```
+
+
+
+## State the reference distribution, degrees of freedom, the test statistic, and p-value.
+
+The test statistic is 15.876. The reference distribution is a t distribution with 197 degrees of freedom. Our P-Value is <2e-16 which is significant at 0.001 alpha level.
+
+## Write a five-part conclusion incorporating the hypotheses in the context of the problem.
+
+We reject the null hypothesis with a p-value of <2e-16 at the 0.05 significance level. There is CONVINCING evidence to suggest that there is a significant linear relationship between FGM in a season and the average players salary in the following season. 
+
+# Step 3: Create an ANOVA table and produce the F-statistic and discuss the R-squared value.
+
+```{r}
+anova(nbalm)
+```
+
+F-Statistic: 252.05
+R-Squared Value (adjusted): 0.5591
+
+# Step 4: Create diagnostic plots to assess model assumptions.
+Residual, QQ, and Leverage vs. Residual plots below (disregard 3rd plot).
+```{r}
+plot(nbalm)
+```
+
+
+
+# Step 5: Summarize your findings
+
+Based on our model summary and plots, we can confidently say that FGM is a significant predictor of a players average salary in the following season (p-value of 2<e16). Looking at our QQ plot, the points are well fit to the line with slight deviation at the tails. Our Residuals plot looks evenly distributed around the mean with slight bunching around the bottom left portion, other than that it looks good. Our leverage plot also looks good, there are no drastic outliers and the points look well distributed around 0 so error is not large. Lastly, our adjusted r squared value of 0.5591 covers a majority of variation and would cover more if we were to add more explanantory variables.
+
+
+
+
+```{r}
+ggplot()
+
+```
+
+#Adding curvature to the model
+
+## polynomial regression 
+```{r}
+library(MASS)
+data(Boston)
+
+head(Boston)
+```
+
+Visualize Data
+
+```{r}
+ggplot(Boston, aes(lstat, medv))+
+geom_point()+
+geom_smooth(se = FALSE)
+```
+```{r}
+mod10<-lm(medv~poly(lstat,10), data = Boston)
+summary(mod10)
+```
+
+```{r}
+#size of split
+ceiling(506*.3)
+#152
+
+#creaete partition indicator for tst 1 and rain (0)
+Boston$part<-rep(0.506)
+
+set.seed(1)
+test<-sample(1:506, 152, replace=FALSE)
+Boston$part[test]<-1
+
+#Train DF
+traindf<-Boston%>%
+  filter(part==0)
+#Test DF
+testdf<-Boston%>%
+  filter(part==1)
+  
+
+```
+
+
+# Milestone 4
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+Goal: The goal of this homework assignment is to fit models to your project dataset.
+
+# A) (10 points) Identify your response variable, a categorical predictor, and a numeric predictor (that you suspect might be related to your response). Describe the units for these variables and for the categorical variable describe the levels.
+```{r}
+NBA_Project_DF <- read_csv("/Users/haydenvaughn/Downloads/NBA_Project_DF.csv", 
+    col_types = cols(draft_round = col_factor(levels = c("Undrafted", 
+        "1", "2"))))
+#str(NBA_Project_DF)
+```
+
+Our response variable is AVG_SALARY(average salary), the unit for this variable is dollars.  The numeric predictor made is FGM(field goals made), the unit for this variable is an integer of a players successful shot attempts.  The Categorical predictor variable is draft_round(round the player was drafted), the levels would be the round the player was drafted in(either 1, 2, or 0 for undrafted). 
+
+
+# B) (10 points) Fit a simple linear model with a response variable and the numeric predictor that you chose. Does the relationship appear to be significant? Make sure to also include a graphic.
+
+```{r}
+nba_data_mod1 <- lm(AVG_SALARY~FGM,NBA_Project_DF)
+summary(nba_data_mod1)
+```
+```{r}
+ggplot(NBA_Project_DF,aes(FGM,AVG_SALARY))+
+  geom_point()+
+  geom_smooth(method="lm",se=FALSE)
+```
+
+Based the model summary and the graphic, the relationship between FGM and AVG_SALARY is significant.  The p-value of the model is significant because it's less than our chosen alpha of 0.05.
+
+# C) (5 points) Now, write the “dummy” variable coding for your categorical variable. (Hint: the contrasts() function might help).
+```{r}
+contrasts(NBA_Project_DF$draft_round, contrasts = TRUE, sparse = FALSE)
+```
+
+Undrafted:      0,0
+1st Round Pick: 1,0
+2nd Round Pick: 0,1
+
+# D) (15 points) Fit a linear model with a response variable and a categorical explanatory variable. Does it appear that there are differences among the means of levels of the categorical variable? (Hint: Look at the ANOVA F-test). Be sure to include an appropriate graphic (i.e. side-by-side boxplot)
+```{r}
+nba_data_mod2 <- lm(AVG_SALARY~draft_round,NBA_Project_DF)
+summary(nba_data_mod2)
+
+ggplot(data=NBA_Project_DF, aes(y=AVG_SALARY, fill=draft_round))+
+  geom_boxplot()
+
+anova(nba_data_mod2)
+```
+Anova F-Test Statistic: 19.825.  Yes, from our graphic, it appears that there are discrepancies in the means of all three factor levels with first round draft picks having the highest, followed by second round draft picks, and then undrafted players.   
+
+#E (15 points) Now fit a multiple linear model that combines parts (b) and (d), with both the numeric and categorical variables. What are the estimated models for the different levels? Include a graphic of the scatter plot with lines overlaid for each level.
+```{r}
+nba_data_modMLR <- lm(AVG_SALARY~FGM+draft_round, data = NBA_Project_DF)
+summary(nba_data_modMLR)
+```
+Graphic
+
+```{r}
+ggplot(NBA_Project_DF, aes(x=FGM, y=AVG_SALARY, color=draft_round))+
+  geom_point()+
+  geom_abline(intercept =  104006, slope=31037 , color="red")+
+  geom_abline(intercept = 104006+2272112, slope=31037, color="green")+
+  geom_abline(intercept = 104006-1037558, slope=31037, color="blue")
+```
+
+The model for undrafted players is y-hat=104006+31037x.
+The model for first round players is y-hat=104006+2272112+31037x.
+The model for second round players is y-hat=104006+1037558+31037x.
+
+#F (15 points) Finally, fit a multiple linear model that also includes the interaction between the numeric and categorical variables, which allows for different slopes. What are the estimated models for the different levels? Include a graphic of the scatter plot with lines overlaid for each level.
+
+```{r}
+nba_data_modMLR2 <- lm(AVG_SALARY~FGM*draft_round, data = NBA_Project_DF)
+summary(nba_data_modMLR2)
+```
+
+Graphic
+```{r}
+ggplot(NBA_Project_DF, aes(x=FGM, y=AVG_SALARY, color=draft_round))+
+  geom_point()+
+  geom_abline(intercept =  158908, slope=30689 , color="red")+
+  geom_abline(intercept = 158908+2922391, slope=30689 -1637, color="green")+
+  geom_abline(intercept = 158908-1176546, slope=30689+9116, color="blue")
+```
+
+The model for undrafted players is y-hat=158908+30689x3.
+The model for first round players is y-hat=158908+2922391+30689x3-1637x1.
+The model for second round players is y-hat=158908-1176546+30689x3+9116x2.
+
+#G (15 points) Compare the models from parts (B), (D), (E), and (F).
+
+## Calculate the MSEs
+```{r}
+set.seed(1234)
+sample_1 <- sample(1:nrow(NBA_Project_DF), nrow(NBA_Project_DF)/2) 
+data_train <- NBA_Project_DF[sample_1,]
+data_test <- NBA_Project_DF[-sample_1,]
+```
+
+```{r}
+#MSE (B)
+library(ModelMetrics)
+pred1 <- predict(nba_data_mod1,data_test)
+mse(data_test$AVG_SALARY, pred1)
+```
+
+```{r}
+#MSE (D)
+pred2 <- predict(nba_data_mod2,data_test)
+mse(data_test$AVG_SALARY, pred2)
+```
+
+```{r}
+#MSE (E)
+pred3 <- predict(nba_data_modMLR,data_test)
+mse(data_test$AVG_SALARY, pred3)
+
+```
+
+```{r}
+#MSE (F)
+pred4 <- predict(nba_data_modMLR2,data_test)
+mse(data_test$AVG_SALARY, pred4)
+```
+
+# Milestone 5
+```{r}
+library(readr)
+```
+
+# Milestone 5
+## Step 1: Categorical response
+
+```{r}
+high_sal <- ifelse(NBA_Project_DF$AVG_SALARY<9500000, "No", "Yes")
+nba_data <- data.frame(NBA_Project_DF,high_sal)
+```
+
+```{r}
+nba_data <- nba_data[-c(1,38)]
+#str(nba_data)
+```
+
+
+The high_sal variable is the AVG_SALARY variable split into two categories. Yes, for players making more than the median AVG_SALARY of 9.5 million, and No otherwise.
+
+##Step 2: Classification Models
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+ggplot(nba_data,aes(x= AVG_SALARY,fill=high_sal))+
+  geom_boxplot()
+```
+```{r}
+library(rpart)
+```
+
+
+```{r}
+nba_tree <- rpart(high_sal~.-AVG_SALARY, data=nba_data, control=rpart.control(minsplit = 10),
+                       method="class")
+```
+
+```{r}
+plot(nba_tree, uniform=TRUE, margin=0.2, main="Classification of Salary")
+
+text(nba_tree, use.n=TRUE, all=TRUE, cex=.8)
+```
+Our root node is free throws made.  The next plits were based on college the player attended.  The next level of splits was based on, from left to right in the tree: number of blocks, team abbreviation, and X1.  Team abbreviation and X1 return terminal nodes, but the left branch of blocks is split further by team abbreviation.  Then the right branch of team abbreviation is split by season, which is then finally split by the number of losses a player's team had to give us the final terminal nodes. 
+
+Step 3: Assessing Model Fit and Error Rate
+
+```{r}
+set.seed(1)
+sample_1 <- sample(1:nrow(nba_data), nrow(nba_data)/2)
+nba_train<- nba_data[sample_1, -which(names(nba_data) %in% c("team_abbreviation","college", "country","draft_year"))] 
+
+nba_test<-nba_data[-sample_1,-which(names(nba_data) %in% c("team_abbreviation","college", "country","draft_year"))]
+```
+
+
+```{r}
+nba_tree1 <- rpart(high_sal~.-AVG_SALARY, data=nba_train, control=rpart.control(minsplit = 10),
+                       method="class")
+```
+
+```{r}
+plot(nba_tree1, uniform=TRUE, margin=0.2, main="Classification of Salary")
+
+text(nba_tree1, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+```{r}
+pred <- predict(nba_tree1, newdata = nba_test)
+
+predYN<-rep(0, 100)
+for(i in 1:dim(pred)[1]){
+  if(pred[i,1]>pred[i,2]){
+    predYN[i]<-"No"
+  }
+    if(pred[i,1]<=pred[i,2]){
+    predYN[i]<-"Yes"
+  }
+}
+```
+
+```{r}
+confmat1 <- table(predYN, nba_test$high_sal)
+confmat1
+```
+
+```{r}
+error_rate <- (9+15)/(9+15+36+40)
+error_rate
+```
+
+#Final Model
+```{r}
+nba_data_modMLR3 <- lm(AVG_SALARY~FGM+PTS+REB+AST, data = NBA_Project_DF)
+summary(nba_data_modMLR3)
+```
+
